@@ -4,16 +4,18 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
+from aiogram import F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.utils.markdown import hbold
+from aiogram.client.default import DefaultBotProperties
 
 TOKEN = "7951207021:AAH_1tSgU0xTCDjeKJ5DBD1B1vA3BYrQ44g"
 ADMIN_ID = 7538330099
 
 logging.basicConfig(level=logging.INFO)
 
-bot = Bot(token=TOKEN, parse_mode="HTML")
+bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 dp = Dispatcher(storage=MemoryStorage())
 
 
@@ -47,18 +49,20 @@ async def help_command(message: types.Message):
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="Sherik kerak"), KeyboardButton(text="Ish joyi kerak")],
-            [KeyboardButton(text="Hodim kerak"), KeyboardButton(text="Ustoz kerak"), KeyboardButton(text="Shogird kerak")]
+            [KeyboardButton(text="Hodim kerak"), KeyboardButton(text="Ustoz kerak")],
+            [KeyboardButton(text="Shogird kerak")]
         ],
-        resize_keyboard=True
+        resize_keyboard=True  # Ensure the keyboard resizes properly
     )
     await message.answer("🆘 *Yordam Menyusi*\n\nQuyidagi variantlardan birini tanlang:", reply_markup=keyboard)
 
 
-@dp.message(Text(["Sherik kerak", "Ish joyi kerak", "Hodim kerak", "Ustoz kerak", "Shogird kerak"]))
+@dp.message(F.text.in_(["Sherik kerak", "Ish joyi kerak", "Hodim kerak", "Ustoz kerak", "Shogird kerak"]))
 async def start_conversation(message: types.Message, state: FSMContext):
     await state.update_data(category=message.text)
     await message.answer("✍️ *Ismingizni kiriting:*")
     await state.set_state(Form.name)
+
 
 
 @dp.message(Form.name)
@@ -101,9 +105,10 @@ async def get_location(message: types.Message, state: FSMContext):
     await state.set_state(Form.contact)
 
 
-@dp.message(Form.contact, Text(startswith='+'))
+@dp.message(Form.contact, F.text(startswith='+'))
 @dp.message(Form.contact, lambda msg: msg.contact)
 async def get_contact(message: types.Message, state: FSMContext):
+    
     contact = message.contact.phone_number if message.contact else message.text
     await state.update_data(contact=contact)
     data = await state.get_data()
@@ -123,7 +128,7 @@ async def get_contact(message: types.Message, state: FSMContext):
     await state.set_state(Form.confirm)
 
 
-@dp.message(Form.confirm, Text("✅ Ha"))
+@dp.message(Form.confirm, F.text("✅ Ha"))
 async def confirm(message: types.Message, state: FSMContext):
     data = await state.get_data()
     user_info = (f"📌 *Yangi e'lon:* {data['category']}\n"
